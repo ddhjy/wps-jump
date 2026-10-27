@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>打开 WPS 协作</title>
+<style>
+  :root{--fg:#1f2329;--muted:#646a73;--bd:#dee0e3;--pri:#2b6af6;--bg:#f5f6f7}
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--fg);background:var(--bg)}
+  main{max-width:480px;margin:0 auto;padding:40px 20px}
+  .card{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:24px}
+  h1{font-size:20px;margin:0 0 8px}
+  p{margin:8px 0;color:var(--muted)}
+  .btn{display:block;width:100%;text-align:center;padding:12px;border-radius:8px;border:0;background:var(--pri);color:#fff;font-size:16px;text-decoration:none;cursor:pointer;margin-top:16px}
+  .btn.sec{background:#fff;color:var(--pri);border:1px solid var(--pri)}
+  .hint{display:none;margin-top:16px;padding:12px;border-radius:8px;background:#fff7e8;color:#8f5b00;font-size:14px}
+  .err{color:#d83931}
+  label{display:block;margin:14px 0 4px;font-size:14px;color:var(--muted)}
+  input,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:15px;background:#fff}
+  code,.out{word-break:break-all;font-family:ui-monospace,Menlo,monospace;font-size:13px}
+  .out{margin-top:14px;padding:10px;border-radius:8px;background:var(--bg);min-height:2.6em}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <section id="jump" class="card" hidden>
+    <h1 id="title">正在打开 WPS 协作…</h1>
+    <p id="desc">如浏览器询问「是否打开 WPS 协作」，请点击允许。</p>
+    <a id="open" class="btn" href="#">打开 WPS 协作</a>
+    <div id="hint" class="hint">没有自动跳转？请确认已安装 WPS 协作客户端，再点上面的按钮；在微信等内置浏览器里请先「在浏览器中打开」。</div>
+    <a class="btn sec" href="https://woa.wps.cn/im/" rel="noopener">改用网页版 WPS 协作</a>
+  </section>
+
+  <section id="bad" class="card" hidden>
+    <h1 class="err">链接无效</h1>
+    <p id="badmsg">参数不正确，或目标不是允许的 WPS 协作链接。</p>
+    <a class="btn sec" href="./">去生成一个链接</a>
+  </section>
+
+  <section id="gen" class="card" hidden>
+    <h1>生成 WPS 协作跳转链接</h1>
+    <p>输入用户 ID 或会话 ID，得到一个可以发给别人的 https 链接，点开即唤起 WPS 协作对应会话。</p>
+    <label for="gt">类型</label>
+    <select id="gt">
+      <option value="user">单聊（WPS 用户 ID）</option>
+      <option value="chat">群聊 / 会话（chat_id）</option>
+    </select>
+    <label for="gid">ID</label>
+    <input id="gid" inputmode="text" autocomplete="off" placeholder="例如 1234567890">
+    <div id="gout" class="out"></div>
+    <button id="gcopy" class="btn" type="button">复制链接</button>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  var ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+  var PREFIX = "ksoxz://xz.wps.cn/";
+  var ALLOWED_PATHS = { "chat": 1, "open": 1 };
+  var TYPES = { user: "user_id", chat: "chat_id" };
+
+  // Build a deeplink from (type, id). Returns null if invalid.
+  function build(t, id) {
+    if (!TYPES.hasOwnProperty(t) || !ID_RE.test(id || "")) return null;
+    return PREFIX + "chat?" + TYPES[t] + "=" + encodeURIComponent(id);
+  }
+
+  // Validate a raw deeplink passed via ?u=. Only ksoxz://xz.wps.cn/{chat,open} with safe params.
+  function sanitize(u) {
+    if (typeof u !== "string" || u.length > 512) return null;
+    if (u.slice(0, PREFIX.length) !== PREFIX) return null;
+    if (/[\s\u0000-\u001f\u007f\\<>"'`]/.test(u)) return null;
+    var rest = u.slice(PREFIX.length);
+    var q = rest.indexOf("?");
+    var path = q < 0 ? rest : rest.slice(0, q);
+    if (!ALLOWED_PATHS.hasOwnProperty(path)) return null;
+    if (q >= 0) {
+      var parts = rest.slice(q + 1).split("&");
+      for (var i = 0; i < parts.length; i++) {
+        var kv = parts[i].split("=");
+        if (kv.length !== 2) return null;
+        if (!/^(chat_id|user_id|mixed_user_id|app_id)$/.test(kv[0])) return null;
+        if (!ID_RE.test(kv[1])) return null;
+      }
+    }
+    return u;
+  }
+
+  function resolve(search) {
+    var p = new URLSearchParams(search);
+    if (p.has("u")) return { target: sanitize(p.get("u")), given: true };
+    if (p.has("t") || p.has("id")) return { target: build(p.get("t"), p.get("id")), given: true };
+    if (p.has("user")) return { target: build("user", p.get("user")), given: true };
+    if (p.has("chat")) return { target: build("chat", p.get("chat")), given: true };
+    return { target: null, given: false };
+  }
+
+  // Exposed for testing.
+  window.__wpsJump = { build: build, sanitize: sanitize, resolve: resolve };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var r = resolve(location.search);
+
+  if (r.given && r.target) {
+    $("jump").hidden = false;
+    var isUser = r.target.indexOf("user_id=") >= 0;
+    $("title").textContent = isUser ? "正在打开单聊…" : "正在打开 WPS 协作会话…";
+    $("open").setAttribute("href", r.target);
+    setTimeout(function () { location.href = r.target; }, 50);
+    var t = setTimeout(function () { $("hint").style.display = "block"; }, 1500);
+    document.addEventListener("visibilitychange", function () { if (document.hidden) clearTimeout(t); });
+  } else if (r.given) {
+    $("bad").hidden = false;
+  } else {
+    $("gen").hidden = false;
+    var base = location.origin + location.pathname;
+    var update = function () {
+      var t = $("gt").value, id = $("gid").value.trim();
+      if (!id) { $("gout").textContent = ""; return; }
+      $("gout").textContent = build(t, id) ? base + "?t=" + t + "&id=" + encodeURIComponent(id) : "ID 只能包含字母、数字、- 和 _";
+    };
+    $("gt").onchange = update; $("gid").oninput = update;
+    $("gcopy").onclick = function () {
+      var s = $("gout").textContent;
+      if (s.indexOf("http") !== 0) return;
+      (navigator.clipboard ? navigator.clipboard.writeText(s) : Promise.reject()).then(
+        function () { $("gcopy").textContent = "已复制"; setTimeout(function () { $("gcopy").textContent = "复制链接"; }, 1500); },
+        function () { prompt("复制这个链接：", s); });
+    };
+  }
+})();
+</script>
+</body>
+</html>
