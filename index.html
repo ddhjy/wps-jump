@@ -5,56 +5,177 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
 <title>打开 WPS 协作</title>
 <style>
-  :root{--fg:#1f2329;--muted:#646a73;--bd:#dee0e3;--pri:#2b6af6;--bg:#f5f6f7}
+  :root{
+    --bg:#f3f5f9;--bg2:#e8eefb;--card:#fff;--fg:#1f2329;--muted:#646a73;--faint:#8f959e;
+    --bd:#e4e7ec;--pri:#2b6af6;--pri-h:#1f58d8;--pri-soft:#eef3ff;--side:#f7f9fc;
+    --warn-bg:#f5f7fa;--warn-fg:#4e5969;--shadow:0 1px 2px rgba(16,24,40,.04),0 12px 40px rgba(16,24,40,.08);
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#111317;--bg2:#161b26;--card:#1b1e24;--fg:#e8eaed;--muted:#a3a9b3;--faint:#7c838d;
+      --bd:#2c3038;--pri:#4b82ff;--pri-h:#6b98ff;--pri-soft:#1e2a44;--side:#20242b;
+      --warn-bg:#23272f;--warn-fg:#c2c7cf;--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 40px rgba(0,0,0,.35);
+    }
+  }
   *{box-sizing:border-box}
-  body{margin:0;font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--fg);background:var(--bg)}
-  main{max-width:480px;margin:0 auto;padding:40px 20px}
-  .card{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:24px}
-  h1{font-size:20px;margin:0 0 8px}
-  p{margin:8px 0;color:var(--muted)}
-  .btn{display:block;width:100%;text-align:center;padding:12px;border-radius:8px;border:0;background:var(--pri);color:#fff;font-size:16px;text-decoration:none;cursor:pointer;margin-top:16px}
-  .btn.sec{background:#fff;color:var(--pri);border:1px solid var(--pri)}
-  .hint{display:none;margin-top:16px;padding:12px;border-radius:8px;background:#fff7e8;color:#8f5b00;font-size:14px}
-  .err{color:#d83931}
-  label{display:block;margin:14px 0 4px;font-size:14px;color:var(--muted)}
-  input,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:15px;background:#fff}
-  code,.out{word-break:break-all;font-family:ui-monospace,Menlo,monospace;font-size:13px}
-  .out{margin-top:14px;padding:10px;border-radius:8px;background:var(--bg);min-height:2.6em}
+  html,body{height:100%}
+  body{margin:0;font:16px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--fg);background:radial-gradient(1200px 600px at 50% -10%,var(--bg2),var(--bg) 70%) fixed;-webkit-font-smoothing:antialiased}
+  .page{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px}
+  .card{width:100%;max-width:920px;background:var(--card);border:1px solid var(--bd);border-radius:20px;box-shadow:var(--shadow);
+    display:grid;grid-template-columns:1.25fr 1fr;overflow:hidden}
+  .main{padding:52px 52px 48px}
+  .side{background:var(--side);border-left:1px solid var(--bd);padding:44px 36px;display:flex;flex-direction:column;justify-content:center}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:36px;font-weight:600;font-size:16px;color:var(--muted)}
+  .brand svg{width:32px;height:32px;flex:none}
+  h1{font-size:32px;line-height:1.3;margin:0 0 8px;letter-spacing:-.01em}
+  .sub{margin:0;color:var(--muted);font-size:16px}
+  .target{margin-top:24px;display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--bd);border-radius:12px;background:var(--side)}
+  .tag{flex:none;font-size:13px;font-weight:600;color:var(--pri);background:var(--pri-soft);padding:2px 10px;border-radius:999px}
+  .tid{flex:1;min-width:0;font-family:var(--mono);font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .copy{flex:none;border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:4px 6px;border-radius:6px}
+  .copy:hover{color:var(--pri);background:var(--pri-soft)}
+  .actions{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;justify-content:center;height:46px;padding:0 24px;border-radius:10px;font-size:16px;font-weight:500;
+    text-decoration:none;cursor:pointer;border:1px solid transparent;transition:background .15s,border-color .15s;font-family:inherit}
+  .btn.pri{background:var(--pri);color:#fff}
+  .btn.pri:hover{background:var(--pri-h)}
+  .btn.sec{background:transparent;color:var(--fg);border-color:var(--bd)}
+  .btn.sec:hover{border-color:var(--pri);color:var(--pri)}
+  .helper{margin-top:16px;font-size:14px;color:var(--faint)}
+  .hint{display:none;margin-top:20px;padding:12px 14px;border-radius:10px;background:var(--warn-bg);color:var(--warn-fg);font-size:14px;line-height:1.6}
+  .hint b{font-weight:600}
+  .side h2{font-size:15px;margin:0 0 20px;color:var(--muted);font-weight:600}
+  .steps{list-style:none;margin:0;padding:0;counter-reset:s}
+  .steps li{counter-increment:s;position:relative;padding-left:40px;margin-bottom:24px;font-size:16px}
+  .steps li:last-child{margin-bottom:0}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:var(--pri-soft);color:var(--pri);
+    font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center}
+  .steps small{display:block;color:var(--faint);font-size:13px;margin-top:2px}
+  .err h1{color:#e5484d}
+  label{display:block;margin:20px 0 6px;font-size:14px;color:var(--muted)}
+  .seg{display:flex;background:var(--side);border:1px solid var(--bd);border-radius:10px;padding:3px}
+  .seg button{flex:1;height:38px;border:0;border-radius:8px;background:none;color:var(--muted);font-size:15px;cursor:pointer;font-family:inherit}
+  .seg button[aria-pressed="true"]{background:var(--card);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  select.hidden-select{display:none}
+  input{width:100%;height:46px;padding:0 14px;border:1px solid var(--bd);border-radius:10px;font-size:16px;background:var(--card);color:var(--fg);font-family:var(--mono)}
+  input:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}
+  .out{margin-top:16px;padding:12px 14px;border-radius:10px;background:var(--side);border:1px dashed var(--bd);min-height:48px;
+    font-family:var(--mono);font-size:13px;word-break:break-all;color:var(--fg)}
+  .out:empty::before{content:"生成的链接会显示在这里";color:var(--faint);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
+  .foot{margin-top:20px;font-size:12px;color:var(--faint)}
+  .foot a{color:inherit}
   [hidden]{display:none!important}
+  @media (max-width:760px){
+    .page{padding:20px 16px;justify-content:flex-start}
+    .card{grid-template-columns:1fr;border-radius:16px}
+    .main{padding:28px 22px 24px}
+    .side{border-left:0;border-top:1px solid var(--bd);padding:24px 22px}
+    .brand{margin-bottom:22px}
+    h1{font-size:22px}
+    .actions{flex-direction:column}
+    .btn{width:100%}
+  }
 </style>
 </head>
 <body>
-<main>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f8bff"/><stop offset="1" stop-color="#2459e6"/></linearGradient>
+    <symbol id="mark" viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="8" fill="url(#lg)"/>
+      <path d="M9 10.5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-7l-4.5 3.5V21.5H9a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z" fill="#fff"/>
+      <circle cx="12.5" cy="16" r="1.4" fill="#2b6af6"/><circle cx="16" cy="16" r="1.4" fill="#2b6af6"/><circle cx="19.5" cy="16" r="1.4" fill="#2b6af6"/>
+    </symbol>
+  </defs>
+</svg>
+<div class="page">
+
   <section id="jump" class="card" hidden>
-    <h1 id="title">正在打开 WPS 协作…</h1>
-    <p id="desc">如浏览器询问「是否打开 WPS 协作」，请点击允许。</p>
-    <a id="open" class="btn" href="#">打开 WPS 协作</a>
-    <div id="hint" class="hint">没有自动跳转？请确认已安装 WPS 协作客户端，再点上面的按钮；在微信等内置浏览器里请先「在浏览器中打开」。</div>
-    <a class="btn sec" href="https://woa.wps.cn/im/" rel="noopener">改用网页版 WPS 协作</a>
+    <div class="main">
+      <div class="brand"><svg><use href="#mark"/></svg>WPS 协作</div>
+      <h1 id="title">正在打开 WPS 协作…</h1>
+      <p class="sub" id="desc">正在唤起客户端，跳转到对应会话。</p>
+      <div class="target">
+        <span class="tag" id="ttype">会话</span>
+        <span class="tid" id="tid" title=""></span>
+        <button class="copy" id="tcopy" type="button">复制</button>
+      </div>
+      <div class="actions">
+        <a id="open" class="btn pri" href="#">打开 WPS 协作</a>
+        <a class="btn sec" href="https://woa.wps.cn/im/" rel="noopener">改用网页版</a>
+      </div>
+      <p class="helper">浏览器询问「是否打开 WPS 协作」时，选允许即可。</p>
+      <div id="hint" class="hint"><b>没有反应？</b>请确认已安装 WPS 协作，再点一次「打开 WPS 协作」；在微信等内置浏览器里，请先选「在浏览器中打开」。</div>
+    </div>
+    <aside class="side">
+      <h2>三步打开会话</h2>
+      <ol class="steps">
+        <li>点击「打开 WPS 协作」<small>页面会自动尝试一次</small></li>
+        <li>在浏览器弹窗中选择允许<small>可勾选「始终允许」，下次免确认</small></li>
+        <li>WPS 协作打开对应会话<small>未安装客户端时，可改用网页版</small></li>
+      </ol>
+    </aside>
   </section>
 
   <section id="bad" class="card" hidden>
-    <h1 class="err">链接无效</h1>
-    <p id="badmsg">参数不正确，或目标不是允许的 WPS 协作链接。</p>
-    <a class="btn sec" href="./">去生成一个链接</a>
+    <div class="main err">
+      <div class="brand"><svg><use href="#mark"/></svg>WPS 协作</div>
+      <h1>链接无效</h1>
+      <p class="sub" id="badmsg">参数不正确，或目标不是允许的 WPS 协作链接。</p>
+      <div class="actions">
+        <a class="btn pri" href="./">去生成一个链接</a>
+        <a class="btn sec" href="https://woa.wps.cn/im/" rel="noopener">打开网页版</a>
+      </div>
+    </div>
+    <aside class="side">
+      <h2>支持的链接格式</h2>
+      <ol class="steps">
+        <li>单聊<small><code>?t=user&amp;id=用户ID</code></small></li>
+        <li>群聊 / 会话<small><code>?t=chat&amp;id=chat_id</code></small></li>
+        <li>只允许跳转到 WPS 协作<small>其他地址一律拒绝</small></li>
+      </ol>
+    </aside>
   </section>
 
   <section id="gen" class="card" hidden>
-    <h1>生成 WPS 协作跳转链接</h1>
-    <p>输入用户 ID 或会话 ID，得到一个可以发给别人的 https 链接，点开即唤起 WPS 协作对应会话。</p>
-    <label for="gt">类型</label>
-    <select id="gt">
-      <option value="user">单聊（WPS 用户 ID）</option>
-      <option value="chat">群聊 / 会话（chat_id）</option>
-    </select>
-    <label for="gid">ID</label>
-    <input id="gid" inputmode="text" autocomplete="off" placeholder="例如 1234567890">
-    <div id="gout" class="out"></div>
-    <button id="gcopy" class="btn" type="button">复制链接</button>
+    <div class="main">
+      <div class="brand"><svg><use href="#mark"/></svg>WPS 协作</div>
+      <h1>生成会话跳转链接</h1>
+      <p class="sub">填入用户 ID 或会话 ID，得到一个 https 链接，点开即在 WPS 协作中打开对应会话。</p>
+      <label>类型</label>
+      <div class="seg" id="seg">
+        <button type="button" data-v="user" aria-pressed="true">单聊</button>
+        <button type="button" data-v="chat" aria-pressed="false">群聊 / 会话</button>
+      </div>
+      <select id="gt" class="hidden-select" aria-hidden="true" tabindex="-1">
+        <option value="user">单聊</option>
+        <option value="chat">群聊 / 会话</option>
+      </select>
+      <label for="gid" id="gidl">WPS 用户 ID</label>
+      <input id="gid" inputmode="text" autocomplete="off" spellcheck="false" placeholder="例如 1234567890">
+      <div id="gout" class="out"></div>
+      <div class="actions">
+        <button id="gcopy" class="btn pri" type="button">复制链接</button>
+        <a id="gtry" class="btn sec" href="#" hidden>试一下</a>
+      </div>
+    </div>
+    <aside class="side">
+      <h2>怎么用</h2>
+      <ol class="steps">
+        <li>选择单聊或群聊<small>单聊填用户 ID，群聊填 chat_id</small></li>
+        <li>复制生成的 https 链接<small>可贴到文档、邮件或消息里</small></li>
+        <li>对方点开即跳转<small>自动唤起 WPS 协作对应会话</small></li>
+      </ol>
+    </aside>
   </section>
-</main>
+
+  <p class="foot">基于 <a href="https://open.wps.cn/documents/app-integration-dev/wps365/client/deeplink" rel="noopener">WPS 协作 Deeplink 协议</a> · 仅跳转到 ksoxz://xz.wps.cn</p>
+</div>
 <script>
 (function () {
   "use strict";
@@ -99,37 +220,66 @@
     return { target: null, given: false };
   }
 
+  // Describe a validated target for display: { kind, label, id }.
+  function describe(target) {
+    var m;
+    if ((m = /[?&]user_id=([A-Za-z0-9_-]+)/.exec(target))) return { kind: "单聊", title: "正在打开单聊…", id: m[1] };
+    if ((m = /[?&]chat_id=([A-Za-z0-9_-]+)/.exec(target))) return { kind: "群聊", title: "正在打开群聊…", id: m[1] };
+    if ((m = /[?&]mixed_user_id=([A-Za-z0-9_-]+)/.exec(target))) return { kind: "单聊", title: "正在打开单聊…", id: m[1] };
+    return { kind: "客户端", title: "正在打开 WPS 协作…", id: "WPS 协作" };
+  }
+
   // Exposed for testing.
   window.__wpsJump = { build: build, sanitize: sanitize, resolve: resolve };
 
   var $ = function (id) { return document.getElementById(id); };
+  function copyText(s, btn, label) {
+    var done = function () { btn.textContent = "已复制"; setTimeout(function () { btn.textContent = label; }, 1500); };
+    (navigator.clipboard ? navigator.clipboard.writeText(s) : Promise.reject()).then(done, function () { prompt("复制：", s); });
+  }
+
   var r = resolve(location.search);
 
   if (r.given && r.target) {
     $("jump").hidden = false;
-    var isUser = r.target.indexOf("user_id=") >= 0;
-    $("title").textContent = isUser ? "正在打开单聊…" : "正在打开 WPS 协作会话…";
+    var d = describe(r.target);
+    $("title").textContent = d.title;
+    document.title = d.title.replace("…", "") + " · WPS 协作";
+    $("ttype").textContent = d.kind;
+    $("tid").textContent = d.id;
+    $("tid").setAttribute("title", r.target);
+    $("tcopy").onclick = function () { copyText(d.id, $("tcopy"), "复制"); };
     $("open").setAttribute("href", r.target);
     setTimeout(function () { location.href = r.target; }, 50);
     var t = setTimeout(function () { $("hint").style.display = "block"; }, 1500);
     document.addEventListener("visibilitychange", function () { if (document.hidden) clearTimeout(t); });
   } else if (r.given) {
     $("bad").hidden = false;
+    document.title = "链接无效 · WPS 协作";
   } else {
     $("gen").hidden = false;
+    document.title = "生成跳转链接 · WPS 协作";
     var base = location.origin + location.pathname;
     var update = function () {
       var t = $("gt").value, id = $("gid").value.trim();
-      if (!id) { $("gout").textContent = ""; return; }
-      $("gout").textContent = build(t, id) ? base + "?t=" + t + "&id=" + encodeURIComponent(id) : "ID 只能包含字母、数字、- 和 _";
+      $("gidl").textContent = t === "user" ? "WPS 用户 ID" : "会话 ID（chat_id）";
+      if (!id) { $("gout").textContent = ""; $("gtry").hidden = true; return; }
+      var ok = !!build(t, id);
+      var link = base + "?t=" + t + "&id=" + encodeURIComponent(id);
+      $("gout").textContent = ok ? link : "ID 只能包含字母、数字、- 和 _";
+      $("gtry").hidden = !ok;
+      if (ok) $("gtry").setAttribute("href", link);
+    };
+    var btns = $("seg").getElementsByTagName("button");
+    for (var i = 0; i < btns.length; i++) btns[i].onclick = function () {
+      for (var j = 0; j < btns.length; j++) btns[j].setAttribute("aria-pressed", btns[j] === this ? "true" : "false");
+      $("gt").value = this.getAttribute("data-v"); update();
     };
     $("gt").onchange = update; $("gid").oninput = update;
     $("gcopy").onclick = function () {
       var s = $("gout").textContent;
       if (s.indexOf("http") !== 0) return;
-      (navigator.clipboard ? navigator.clipboard.writeText(s) : Promise.reject()).then(
-        function () { $("gcopy").textContent = "已复制"; setTimeout(function () { $("gcopy").textContent = "复制链接"; }, 1500); },
-        function () { prompt("复制这个链接：", s); });
+      copyText(s, $("gcopy"), "复制链接");
     };
   }
 })();
